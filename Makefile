@@ -7,7 +7,7 @@ RAYLIB_LIBS := $(shell $(PKG_CONFIG) --libs raylib 2>/dev/null)
 ifeq ($(strip $(RAYLIB_LIBS)),)
     RAYLIB_CFLAGS :=
     ifeq ($(OS),Windows_NT)
-        RAYLIB_LIBS := -lraylib -lopengl32 -lgdi32 -lwinmm -lm
+        RAYLIB_LIBS := -lraylib -lopengl32 -lgdi32 -lwinmm -luser32 -lm
     else
         RAYLIB_LIBS := -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
     endif
@@ -23,7 +23,7 @@ else
     TARGET := utbk_tactics
 endif
 
-SRC := src/main.c src/game.c src/ui.c src/screens.c
+SRC := src/main.c src/game.c src/ui.c src/screens.c src/exam.c src/demo_questions.c
 OBJ := $(SRC:.c=.o)
 
 all: $(TARGET)
@@ -31,7 +31,7 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $@ $(LDLIBS)
 
-src/%.o: src/%.c src/game.h src/ui.h src/screens.h
+src/%.o: src/%.c src/game.h src/ui.h src/screens.h src/exam.h src/demo_questions.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(TARGET)

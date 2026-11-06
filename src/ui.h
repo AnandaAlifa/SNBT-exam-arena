@@ -32,6 +32,11 @@ void UI_TextCentered(Font font, const char *text, Rectangle bounds, float fontSi
                      float spacing, Color color);
 void UI_DrawTextWrapped(Font font, const char *text, Rectangle bounds, float fontSize,
                         float spacing, float lineHeight, Color color);
+float UI_MeasureWrappedTextHeight(Font font, const char *text, float width,
+                                  float fontSize, float spacing, float lineHeight);
+float UI_DrawTextWrappedScrolled(Font font, const char *text, Rectangle bounds,
+                                 float fontSize, float spacing, float lineHeight,
+                                 float scroll, Color color);
 void UI_DrawSectionLabel(Font font, const char *text, float x, float y, Color accent);
 
 bool UI_IsHovered(Rectangle bounds);

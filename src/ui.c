@@ -74,6 +74,56 @@ void UI_TextCentered(Font font, const char *text, Rectangle bounds, float fontSi
     DrawTextEx(font, text, position, fontSize, spacing, color);
 }
 
+static const char *UI_NextWrappedLine(const char *cursor, Font font, float width,
+                                      float fontSize, float spacing,
+                                      char *line, int lineSize)
+{
+    line[0] = '\0';
+
+    while (*cursor == ' ') {
+        ++cursor;
+    }
+    if (*cursor == '\0') {
+        return cursor;
+    }
+    if (*cursor == '\n') {
+        ++cursor;
+        return cursor;
+    }
+
+    const char *p = cursor;
+    while (*p != '\0' && *p != '\n') {
+        const char *wordStart = p;
+        while (*p != '\0' && *p != ' ' && *p != '\n') {
+            ++p;
+        }
+
+        int wordLength = (int)(p - wordStart);
+        char candidate[1024];
+        if (line[0] == '\0') {
+            snprintf(candidate, sizeof(candidate), "%.*s", wordLength, wordStart);
+        } else {
+            snprintf(candidate, sizeof(candidate), "%s %.*s", line, wordLength, wordStart);
+        }
+
+        Vector2 size = MeasureTextEx(font, candidate, fontSize, spacing);
+        if (line[0] != '\0' && size.x > width) {
+            return wordStart;
+        }
+
+        snprintf(line, (size_t)lineSize, "%s", candidate);
+
+        while (*p == ' ') {
+            ++p;
+        }
+    }
+
+    if (*p == '\n') {
+        ++p;
+    }
+    return p;
+}
+
 void UI_DrawTextWrapped(Font font, const char *text, Rectangle bounds, float fontSize,
                         float spacing, float lineHeight, Color color)
 {
@@ -81,49 +131,87 @@ void UI_DrawTextWrapped(Font font, const char *text, Rectangle bounds, float fon
         return;
     }
 
-    char line[512] = { 0 };
     const char *cursor = text;
     float y = bounds.y;
 
     while (*cursor != '\0') {
-        while (*cursor == ' ') {
-            ++cursor;
-        }
-        if (*cursor == '\0') {
+        char line[1024];
+        const char *next = UI_NextWrappedLine(cursor, font, bounds.width, fontSize, spacing,
+                                              line, (int)sizeof(line));
+        if (next == cursor) {
             break;
         }
 
-        char word[128] = { 0 };
-        int wordLength = 0;
-        while (*cursor != '\0' && *cursor != ' ' && wordLength < (int)sizeof(word) - 1) {
-            word[wordLength++] = *cursor++;
-        }
-        word[wordLength] = '\0';
-
-        char candidate[640] = { 0 };
         if (line[0] != '\0') {
-            snprintf(candidate, sizeof(candidate), "%s %s", line, word);
-        } else {
-            snprintf(candidate, sizeof(candidate), "%s", word);
-        }
-
-        Vector2 candidateSize = MeasureTextEx(font, candidate, fontSize, spacing);
-        if (line[0] != '\0' && candidateSize.x > bounds.width) {
+            if (y + lineHeight > bounds.y + bounds.height) {
+                break;
+            }
             DrawTextEx(font, line, (Vector2){ bounds.x, y }, fontSize, spacing, color);
-            y += lineHeight;
-            snprintf(line, sizeof(line), "%s", word);
-        } else {
-            snprintf(line, sizeof(line), "%s", candidate);
         }
 
-        if (y > bounds.y + bounds.height) {
-            return;
-        }
+        y += lineHeight;
+        cursor = next;
+    }
+}
+
+float UI_MeasureWrappedTextHeight(Font font, const char *text, float width,
+                                  float fontSize, float spacing, float lineHeight)
+{
+    if (text == NULL || text[0] == '\0') {
+        return 0.0f;
     }
 
-    if (line[0] != '\0') {
-        DrawTextEx(font, line, (Vector2){ bounds.x, y }, fontSize, spacing, color);
+    const char *cursor = text;
+    float height = 0.0f;
+
+    while (*cursor != '\0') {
+        char line[1024];
+        const char *next = UI_NextWrappedLine(cursor, font, width, fontSize, spacing,
+                                              line, (int)sizeof(line));
+        if (next == cursor) {
+            break;
+        }
+        height += lineHeight;
+        cursor = next;
     }
+
+    return height;
+}
+
+float UI_DrawTextWrappedScrolled(Font font, const char *text, Rectangle bounds,
+                                 float fontSize, float spacing, float lineHeight,
+                                 float scroll, Color color)
+{
+    if (text == NULL || text[0] == '\0') {
+        return 0.0f;
+    }
+
+    float contentHeight = UI_MeasureWrappedTextHeight(font, text, bounds.width,
+                                                      fontSize, spacing, lineHeight);
+    BeginScissorMode((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)bounds.height);
+
+    const char *cursor = text;
+    float y = bounds.y - scroll;
+
+    while (*cursor != '\0') {
+        char line[1024];
+        const char *next = UI_NextWrappedLine(cursor, font, bounds.width, fontSize, spacing,
+                                              line, (int)sizeof(line));
+        if (next == cursor) {
+            break;
+        }
+
+        if (line[0] != '\0' && y + lineHeight >= bounds.y &&
+            y <= bounds.y + bounds.height) {
+            DrawTextEx(font, line, (Vector2){ bounds.x, y }, fontSize, spacing, color);
+        }
+
+        y += lineHeight;
+        cursor = next;
+    }
+
+    EndScissorMode();
+    return contentHeight;
 }
 
 void UI_DrawSectionLabel(Font font, const char *text, float x, float y, Color accent)

@@ -1,4 +1,5 @@
 #include "screens.h"
+#include "demo_questions.h"
 #include "ui.h"
 
 #include <math.h>
@@ -278,7 +279,7 @@ void DrawMenu(const Game *game)
                     (Rectangle){ panel.x, 602.0f, panel.width, 22.0f },
                     13.0f, 0.5f, Fade(UI_MUTED, 0.8f));
 
-    UI_TextSpaced(game->fonts.small, "v0.1 // PHASE 1",
+    UI_TextSpaced(game->fonts.small, "v0.2 // PHASE 2",
                   panel.x + 34.0f, 638.0f, 11.0f, 1.5f, Fade(UI_MUTED, 0.55f));
 
     const char *engine = "POWERED BY RAYLIB";
@@ -532,28 +533,51 @@ void DrawDifficulty(const Game *game)
 }
 
 /* ------------------------------------------------------------------------- */
-/* Subtest selection placeholder                                             */
+/* Subtest selection                                                         */
 /* ------------------------------------------------------------------------- */
 
 static Rectangle SubtestPanelRect(void)
 {
-    return (Rectangle){ 220.0f, 158.0f, 840.0f, 426.0f };
+    return (Rectangle){ 220.0f, 150.0f, 840.0f, 476.0f };
 }
 
 static Rectangle SubtestRowRect(int index)
 {
-    return (Rectangle){ 250.0f, 184.0f + (float)index * 50.0f, 780.0f, 44.0f };
+    return (Rectangle){ 250.0f, 176.0f + (float)index * 48.0f, 780.0f, 42.0f };
 }
 
 static Rectangle SubtestBackRect(void)
 {
-    return (Rectangle){ 545.0f, 632.0f, 190.0f, 46.0f };
+    return (Rectangle){ 515.0f, 570.0f, 190.0f, 44.0f };
+}
+
+static Rectangle SubtestStartRect(void)
+{
+    return (Rectangle){ 715.0f, 570.0f, 190.0f, 44.0f };
 }
 
 void UpdateSubtestSelect(Game *game)
 {
+    for (int i = 0; i < SUBTEST_COUNT; ++i) {
+        if (UI_IsHovered(SubtestRowRect(i))) {
+            game->selectedSubtest = i;
+        }
+    }
+
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
+        game->selectedSubtest = (game->selectedSubtest + 1) % SUBTEST_COUNT;
+    }
+    if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
+        game->selectedSubtest = (game->selectedSubtest + SUBTEST_COUNT - 1) % SUBTEST_COUNT;
+    }
+
     if (UI_IsClicked(SubtestBackRect()) || IsKeyPressed(KEY_ESCAPE)) {
         GameChangeState(game, STATE_SELECT_DIFFICULTY);
+        return;
+    }
+
+    if (UI_IsClicked(SubtestStartRect()) || EnterPressed()) {
+        GameStartExam(game, game->selectedSubtest);
     }
 }
 
@@ -562,8 +586,12 @@ void DrawSubtestSelect(const Game *game)
     UI_DrawBackground(game->totalTime);
 
     const DifficultyInfo *difficulty = GameCurrentDifficulty(game);
+    int selected = game->selectedSubtest;
+    if (selected < 0 || selected >= SUBTEST_COUNT) {
+        selected = 0;
+    }
 
-    const char *eyebrow = "PEMILIHAN SUBTES // PHASE 1 SCAFFOLD";
+    const char *eyebrow = "PEMILIHAN SUBTES // SIAP DIMULAI";
     Vector2 eyebrowSize = MeasureTextEx(game->fonts.small, eyebrow, 12.0f, 2.6f);
     DrawTextEx(game->fonts.small, eyebrow,
                (Vector2){ (SCREEN_WIDTH - eyebrowSize.x) * 0.5f, 42.0f },
@@ -575,7 +603,7 @@ void DrawSubtestSelect(const Game *game)
 
     char subtitle[192];
     snprintf(subtitle, sizeof(subtitle),
-             "%s  //  MODE %s  //  160 SOAL PER SESI",
+             "%s  //  MODE %s  //  DEMO BANK SOAL",
              game->session.playerName, difficulty->name);
     UI_TextCentered(game->fonts.ui, subtitle,
                     (Rectangle){ 0.0f, 112.0f, SCREEN_WIDTH, 28.0f },
@@ -586,28 +614,38 @@ void DrawSubtestSelect(const Game *game)
 
     for (int i = 0; i < SUBTEST_COUNT; ++i) {
         Rectangle row = SubtestRowRect(i);
-        if (i % 2 == 0) {
-            DrawRectangleRounded(row, 0.25f, 8, Fade(UI_PANEL_LIGHT, 0.35f));
+        bool isSelected = (i == selected);
+        bool hovered = CheckCollisionPointRec(GetMousePosition(), row);
+
+        if (isSelected) {
+            DrawRectangleRounded(row, 0.22f, 8, Fade(UI_CYAN, 0.12f));
+            DrawRectangleRoundedLinesEx(row, 0.22f, 8, 1.5f, Fade(UI_CYAN, 0.75f));
+            DrawRectangle((int)row.x, (int)row.y + 6, 3, (int)row.height - 12, UI_CYAN);
+        } else if (hovered) {
+            DrawRectangleRounded(row, 0.22f, 8, Fade(UI_CYAN, 0.05f));
+        } else if (i % 2 == 0) {
+            DrawRectangleRounded(row, 0.22f, 8, Fade(UI_PANEL_LIGHT, 0.35f));
         }
 
-        Rectangle badge = { row.x + 12.0f, row.y + 8.0f, 48.0f, 28.0f };
-        DrawRectangleRounded(badge, 0.25f, 8, Fade(UI_CYAN, 0.10f));
-        DrawRectangleRoundedLinesEx(badge, 0.25f, 8, 1.0f, Fade(UI_CYAN, 0.45f));
+        Rectangle badge = { row.x + 12.0f, row.y + 7.0f, 48.0f, 28.0f };
+        DrawRectangleRounded(badge, 0.25f, 8, Fade(UI_CYAN, isSelected ? 0.20f : 0.10f));
+        DrawRectangleRoundedLinesEx(badge, 0.25f, 8, 1.0f,
+                                    Fade(UI_CYAN, isSelected ? 0.80f : 0.45f));
         UI_TextCentered(game->fonts.small, SUBTEST_CODES[i], badge,
                         13.0f, 1.0f, UI_CYAN);
 
         UI_Text(game->fonts.ui, SUBTEST_NAMES[i],
-                row.x + 76.0f, row.y + 11.0f, 17.0f,
-                (Color){ 205, 212, 227, 255 });
+                row.x + 76.0f, row.y + 10.0f, 17.0f,
+                isSelected ? UI_TEXT : (Color){ 205, 212, 227, 255 });
 
         char questionLabel[32];
-        snprintf(questionLabel, sizeof(questionLabel), "%d soal",
-                 SUBTEST_QUESTION_COUNT[i]);
+        snprintf(questionLabel, sizeof(questionLabel), "%d soal demo",
+                 DEMO_QUESTION_COUNTS[i]);
         Vector2 questionSize = MeasureTextEx(game->fonts.small, questionLabel,
                                              13.0f, 0.3f);
         UI_Text(game->fonts.small, questionLabel,
                 row.x + row.width - 228.0f - questionSize.x,
-                row.y + 14.0f, 13.0f, UI_MUTED);
+                row.y + 13.0f, 13.0f, UI_MUTED);
 
         char duration[32];
         GameFormatDuration(GameSubtestDurationSeconds(game->session.currentDifficulty, i),
@@ -615,18 +653,26 @@ void DrawSubtestSelect(const Game *game)
         Vector2 durationSize = MeasureTextEx(game->fonts.small, duration, 13.0f, 0.3f);
         UI_Text(game->fonts.small, duration,
                 row.x + row.width - 24.0f - durationSize.x,
-                row.y + 14.0f, 13.0f, Fade(difficulty->accent, 0.95f));
+                row.y + 13.0f, 13.0f, Fade(difficulty->accent, 0.95f));
+
+        if (isSelected) {
+            UI_Text(game->fonts.small, ">", row.x + row.width - 10.0f,
+                    row.y + 10.0f, 16.0f, UI_CYAN);
+        }
     }
 
-    const char *note = "Pemilihan subtes dan sesi ujian akan diimplementasikan pada Phase 2-3.";
+    const char *note = "Phase 2 memakai bank soal demo. Bank soal lengkap 160 soal menyusul di Phase 3.";
     UI_TextCentered(game->fonts.small, note,
-                    (Rectangle){ panel.x, 548.0f, panel.width, 22.0f },
+                    (Rectangle){ panel.x, 520.0f, panel.width, 22.0f },
                     13.0f, 0.3f, Fade(UI_MUTED, 0.85f));
 
     UI_Button(game->fonts.ui, SubtestBackRect(), "KEMBALI",
               false, true, UI_BUTTON_SECONDARY, UI_CYAN);
+    UI_Button(game->fonts.ui, SubtestStartRect(), "MULAI UJIAN",
+              false, true, UI_BUTTON_PRIMARY, difficulty->accent);
 
-    UI_TextCentered(game->fonts.small, "ESC: KEMBALI KE PEMILIHAN MODE",
+    UI_TextCentered(game->fonts.small,
+                    "W/S ATAU PANAH: PILIH SUBTES   |   ENTER: MULAI UJIAN   |   ESC: KEMBALI",
                     (Rectangle){ 0.0f, 692.0f, SCREEN_WIDTH, 20.0f },
                     12.0f, 0.8f, Fade(UI_MUTED, 0.7f));
 }
@@ -657,8 +703,9 @@ static const char *PlaceholderPhase(GameState state)
         case STATE_LEADERBOARD:
             return "PHASE 5";
         case STATE_EXAM:
-            return "PHASE 2-3";
+            return "PHASE 2";
         case STATE_SCORE_SUMMARY:
+            return "PHASE 3";
         case STATE_REVIEW_PHASE:
             return "PHASE 4";
         default:
@@ -674,10 +721,10 @@ static const char *PlaceholderNote(GameState state)
                    "sorting skor descending, dan tampilan papan peringkat.";
         case STATE_EXAM:
             return "UI ujian, timer per subtes, panel passage yang bisa di-scroll, "
-                   "dan sprite Sae Chabashira dibuat pada Phase 2-3.";
+                   "dan sprite Sae Chabashira tersedia pada Phase 2.";
         case STATE_SCORE_SUMMARY:
             return "Kalkulasi Item Response Theory (IRT) dan ringkasan skor akhir "
-                   "dibuat pada Phase 4.";
+                   "dibuat pada Phase 3.";
         case STATE_REVIEW_PHASE:
             return "Pembahasan per nomor, sprite Arisu Sakayanagi, dan integrasi "
                    "Text-to-Speech dibuat pada Phase 4.";
@@ -731,7 +778,7 @@ void DrawPlaceholder(const Game *game)
                     (Rectangle){ panel.x, panel.y + 68.0f, panel.width, 52.0f },
                     38.0f, 1.2f, UI_TEXT);
 
-    const char *subtitle = "Modul ini belum termasuk dalam Phase 1.";
+    const char *subtitle = "Modul ini akan dibangun pada fase berikutnya.";
     UI_TextCentered(game->fonts.small, subtitle,
                     (Rectangle){ panel.x, panel.y + 122.0f, panel.width, 24.0f },
                     14.0f, 0.4f, UI_MUTED);

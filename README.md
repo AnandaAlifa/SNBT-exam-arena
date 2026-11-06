@@ -2,7 +2,7 @@
 
 Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT dengan nuansa visual novel. Pemain memasukkan nama, memilih tingkat kesulitan, lalu menjalani sesi ujian yang dipandu oleh karakter bergaya *Classroom of the Elite*.
 
-> **Status:** Phase 1 selesai. Sesi ujian, scoring IRT, pembahasan, TTS, dan leaderboard masih berupa placeholder dan akan dibangun pada fase berikutnya.
+> **Status:** Phase 2 selesai. Layar ujian interaktif sudah berjalan dengan bank soal demo. Scoring IRT, pembahasan, TTS, dan leaderboard masih berupa placeholder dan akan dibangun pada fase berikutnya.
 
 ![Menu utama](docs/screenshots/menu.png)
 
@@ -12,16 +12,25 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 | :---: | :---: |
 | ![Difficulty](docs/screenshots/difficulty.png) | ![Subtes](docs/screenshots/subtest.png) |
 
-## Fitur Phase 1
+### Layar Ujian
+
+![Layar ujian](docs/screenshots/exam.png)
+
+## Fitur Phase 2
 
 - State machine dengan 7 state sesuai SDD: menu, difficulty, subtes, ujian, ringkasan skor, pembahasan, dan leaderboard.
 - Input nama pemain interaktif dengan validasi, batas 31 karakter, caret, dan backspace.
-- Navigasi menu menggunakan keyboard dan mouse.
 - Lima tingkat kesulitan dengan konfigurasi time multiplier, score multiplier, dan status TTS.
-- Data 7 subtes resmi UTBK SNBT beserta jumlah soal dan durasi acuan mode Hard.
+- Pemilihan subtes interaktif dengan 7 subtes resmi UTBK SNBT dan durasi per subtes.
+- Layar ujian dengan header subtes, timer countdown, progress bar, dan tombol keluar.
+- Panel stimulus dengan word-wrap, scrollbar, serta gulir via mouse wheel dan `PageUp`/`PageDown`.
+- Panel soal dengan navigator 30 soal, status terjawab, opsi A–E, dan fokus keyboard/mouse.
+- Sprite Sae Chabashira 3 frame dengan animasi idle dan tips kontekstual per soal.
+- Overlay konfirmasi selesai ujian, keluar ujian, dan waktu habis.
+- Bank soal demo 15 soal: PU 3 soal, PPU/PBM/PK/LBI/LBE/PM masing-masing 2 soal.
 - Tampilan custom immediate-mode dengan animasi background, panel, tombol, dan transisi fade.
 - Font sistem otomatis (Segoe UI / DejaVu Sans) dengan fallback ke font bawaan Raylib.
-- Placeholder terstruktur untuk state yang akan dikerjakan pada Phase 2–5.
+- Placeholder terstruktur untuk scoring IRT, pembahasan, TTS, dan leaderboard (Phase 3–5).
 
 ## Teknologi
 
@@ -35,12 +44,17 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 ```text
 .
 ├── src/
-│   ├── main.c          # Entry point dan game loop
-│   ├── game.c/.h       # State machine, session, difficulty, font
-│   ├── screens.c/.h    # Menu, difficulty, subtes, placeholder
-│   └── ui.c/.h         # Komponen UI custom
+│   ├── main.c              # Entry point dan game loop
+│   ├── game.c/.h           # State machine, session, difficulty, font, asset
+│   ├── screens.c/.h        # Menu, difficulty, subtes, placeholder
+│   ├── exam.c/.h           # Layar ujian, timer, scroll, overlay
+│   ├── demo_questions.c/.h # Bank soal demo 7 subtes
+│   └── ui.c/.h             # Komponen UI custom
+├── assets/
+│   └── characters/
+│       └── sae_chabashira.png
 ├── docs/
-│   └── screenshots/    # Dokumentasi visual
+│   └── screenshots/        # Dokumentasi visual
 ├── Makefile
 ├── Plan.md
 ├── SDD.md
@@ -77,7 +91,8 @@ Pastikan GCC dan Raylib sudah terpasang dan tersedia di `PATH`:
 
 ```powershell
 gcc -std=c99 -Wall -Wextra -O2 -Isrc src/main.c src/game.c src/ui.c src/screens.c `
-    -o utbk_tactics.exe -lraylib -lopengl32 -lgdi32 -lwinmm -lm
+    src/exam.c src/demo_questions.c `
+    -o utbk_tactics.exe -lraylib -lopengl32 -lgdi32 -lwinmm -luser32 -lm
 
 .\utbk_tactics.exe
 ```
@@ -112,20 +127,41 @@ make
 | `Enter` / `Space` | Lanjut ke pemilihan subtes |
 | `Esc` | Kembali ke menu |
 
+### Pemilihan Subtes
+
+| Tombol | Aksi |
+| --- | --- |
+| `W` / `S` / `↑` / `↓` | Memilih subtes |
+| `Enter` | Memulai ujian |
+| `Esc` | Kembali ke pemilihan difficulty |
+
+### Layar Ujian
+
+| Tombol | Aksi |
+| --- | --- |
+| `A` / `D` / `←` / `→` | Soal sebelumnya / berikutnya |
+| `W` / `S` / `↑` / `↓` | Memindahkan fokus opsi |
+| `1`–`5` | Memilih jawaban A–E |
+| `Enter` | Mengunci jawaban pada opsi yang fokus |
+| `F` | Membuka konfirmasi selesai ujian |
+| `PageUp` / `PageDown` / scroll | Menggulir teks stimulus |
+| `Esc` | Membuka konfirmasi keluar ujian |
+| Mouse | Klik opsi, navigator soal, dan tombol |
+
 ## Roadmap
 
 - [x] **Phase 1** — Boilerplate, state machine, input nama, pemilihan difficulty
-- [ ] **Phase 2** — Layout ujian, scrolling passage, sprite Sae Chabashira
-- [ ] **Phase 3** — Parsing JSON modular, 1600+ bank soal, Fisher–Yates, timer per subtes
+- [x] **Phase 2** — Layout ujian, scrolling passage, sprite Sae Chabashira, bank soal demo
+- [ ] **Phase 3** — Parsing JSON modular, bank soal lengkap 1600+, Fisher–Yates, seleksi soal per subtes
 - [ ] **Phase 4** — Scoring IRT, review phase, sprite Arisu Sakayanagi, TTS
 - [ ] **Phase 5** — Leaderboard Top 10, file I/O, memory management
 
 ## Catatan Pengembangan
 
-- Phase 1 belum memuat bank soal, timer ujian, scoring, TTS, atau leaderboard.
+- Phase 2 memuat bank soal demo 15 soal; bank soal lengkap 1600+ soal dan parsing JSON menyusul Phase 3.
+- Timer per subtes sudah berjalan, tetapi scoring IRT, review, TTS, dan leaderboard masih placeholder.
 - Tombol **Papan Peringkat** dan state lanjutan saat ini menampilkan placeholder informatif.
-- Data soal akan dipecah menjadi 7 file JSON modular pada Phase 3.
-- Aset karakter akan ditempatkan di `assets/characters/` pada Phase 2.
+- Aset karakter berada di `assets/characters/sae_chabashira.png` dan dimuat saat runtime.
 
 ## Kredit & Disclaimer
 

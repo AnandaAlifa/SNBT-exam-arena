@@ -1,4 +1,6 @@
 #include "game.h"
+#include "demo_questions.h"
+#include "exam.h"
 #include "screens.h"
 #include "ui.h"
 
@@ -110,9 +112,21 @@ void GameInit(Game *game)
     game->nameLength = 0;
     game->nameErrorTimer = 0.0f;
     game->selectedDifficulty = DIFFICULTY_HARD;
+    game->selectedSubtest = 0;
     game->exitRequested = false;
 
+    game->examScroll = 0.0f;
+    game->examScrollTarget = 0.0f;
+    game->examFocusedOption = 0;
+    game->examTotalSeconds = 0;
+    game->examOverlay = EXAM_OVERLAY_NONE;
+
     game->session.currentDifficulty = DIFFICULTY_HARD;
+    game->session.currentSubtest = 0;
+    game->session.currentQuestion = 0;
+    game->session.questionCount = 0;
+    game->session.questions = NULL;
+    game->session.answerOffset = 0;
     game->session.timeRemaining = 0.0f;
     game->session.rawIRTScore = 0;
     game->session.finalScore = 0;
@@ -124,10 +138,22 @@ void GameInit(Game *game)
     game->fonts.title = LoadGameFont(96);
     game->fonts.ui = LoadGameFont(32);
     game->fonts.small = LoadGameFont(20);
+
+    game->saeTexture = LoadTexture("assets/characters/sae_chabashira.png");
+    if (game->saeTexture.id != 0) {
+        SetTextureFilter(game->saeTexture, TEXTURE_FILTER_BILINEAR);
+    }
+    game->saeFrame = 0;
+    game->saeAnimTimer = 0.0f;
 }
 
 void GameUnload(Game *game)
 {
+    if (game->saeTexture.id != 0) {
+        UnloadTexture(game->saeTexture);
+        game->saeTexture.id = 0;
+    }
+
     UnloadGameFont(&game->fonts.title);
     UnloadGameFont(&game->fonts.ui);
     UnloadGameFont(&game->fonts.small);
@@ -165,6 +191,12 @@ void GameUpdate(Game *game)
         }
     }
 
+    game->saeAnimTimer += dt;
+    if (game->saeAnimTimer >= 0.45f) {
+        game->saeAnimTimer -= 0.45f;
+        game->saeFrame = (game->saeFrame + 1) % 3;
+    }
+
     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
     switch (game->state) {
@@ -177,10 +209,12 @@ void GameUpdate(Game *game)
         case STATE_SUBTEST_SELECT:
             UpdateSubtestSelect(game);
             break;
+        case STATE_EXAM:
+            UpdateExam(game);
+            break;
         case STATE_LEADERBOARD:
             UpdatePlaceholder(game);
             break;
-        case STATE_EXAM:
         case STATE_SCORE_SUMMARY:
         case STATE_REVIEW_PHASE:
             UpdatePlaceholder(game);
@@ -204,10 +238,12 @@ void GameDraw(const Game *game)
         case STATE_SUBTEST_SELECT:
             DrawSubtestSelect(game);
             break;
+        case STATE_EXAM:
+            DrawExam(game);
+            break;
         case STATE_LEADERBOARD:
             DrawPlaceholder(game);
             break;
-        case STATE_EXAM:
         case STATE_SCORE_SUMMARY:
         case STATE_REVIEW_PHASE:
             DrawPlaceholder(game);
@@ -326,4 +362,117 @@ void GameFormatDuration(int seconds, char *out, int outSize)
     } else {
         snprintf(out, (size_t)outSize, "%dm %02ds", minutes, secs);
     }
+}
+
+int GameSubtestAnswerOffset(int subtest)
+{
+    if (subtest < 0 || subtest >= SUBTEST_COUNT) {
+        return 0;
+    }
+
+    int offset = 0;
+    for (int i = 0; i < subtest; ++i) {
+        offset += SUBTEST_QUESTION_COUNT[i];
+    }
+    return offset;
+}
+
+void GameStartExam(Game *game, int subtest)
+{
+    if (subtest < 0 || subtest >= SUBTEST_COUNT) {
+        subtest = 0;
+    }
+
+    game->session.currentSubtest = subtest;
+    game->session.currentQuestion = 0;
+    game->session.questionCount = DEMO_QUESTION_COUNTS[subtest];
+    game->session.questions = DEMO_QUESTIONS[subtest];
+    game->session.answerOffset = GameSubtestAnswerOffset(subtest);
+
+    for (int i = 0; i < SUBTEST_QUESTION_COUNT[subtest]; ++i) {
+        game->session.userAnswers[game->session.answerOffset + i] = -1;
+    }
+
+    int seconds = GameSubtestDurationSeconds(game->session.currentDifficulty, subtest);
+    game->examTotalSeconds = seconds;
+    game->session.timeRemaining = (float)seconds;
+    game->examScroll = 0.0f;
+    game->examScrollTarget = 0.0f;
+    game->examFocusedOption = 0;
+    game->examOverlay = EXAM_OVERLAY_NONE;
+
+    GameChangeState(game, STATE_EXAM);
+}
+
+const Question *GameCurrentQuestion(const Game *game)
+{
+    if (game->session.questions == NULL || game->session.questionCount <= 0) {
+        return NULL;
+    }
+
+    int index = game->session.currentQuestion;
+    if (index < 0) {
+        index = 0;
+    } else if (index >= game->session.questionCount) {
+        index = game->session.questionCount - 1;
+    }
+    return &game->session.questions[index];
+}
+
+int GameCurrentAnswer(const Game *game)
+{
+    if (game->session.questions == NULL) {
+        return -1;
+    }
+
+    int index = game->session.answerOffset + game->session.currentQuestion;
+    if (index < 0 || index >= MAX_SESSION_QUESTIONS) {
+        return -1;
+    }
+    return game->session.userAnswers[index];
+}
+
+void GameSetCurrentAnswer(Game *game, int option)
+{
+    if (game->session.questions == NULL || option < 0 || option >= MAX_OPTIONS) {
+        return;
+    }
+
+    int index = game->session.answerOffset + game->session.currentQuestion;
+    if (index < 0 || index >= MAX_SESSION_QUESTIONS) {
+        return;
+    }
+    game->session.userAnswers[index] = option;
+}
+
+void GameGoToQuestion(Game *game, int index)
+{
+    if (game->session.questions == NULL || game->session.questionCount <= 0) {
+        return;
+    }
+
+    if (index < 0) {
+        index = 0;
+    } else if (index >= game->session.questionCount) {
+        index = game->session.questionCount - 1;
+    }
+
+    if (index == game->session.currentQuestion) {
+        return;
+    }
+
+    const Question *oldQuestion = GameCurrentQuestion(game);
+    const char *oldPassage = oldQuestion != NULL ? oldQuestion->passage : NULL;
+
+    game->session.currentQuestion = index;
+
+    const Question *newQuestion = GameCurrentQuestion(game);
+    const char *newPassage = newQuestion != NULL ? newQuestion->passage : NULL;
+    if (oldPassage != newPassage) {
+        game->examScroll = 0.0f;
+        game->examScrollTarget = 0.0f;
+    }
+
+    int answer = GameCurrentAnswer(game);
+    game->examFocusedOption = answer >= 0 ? answer : 0;
 }
