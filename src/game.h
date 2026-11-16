@@ -56,6 +56,7 @@ typedef struct {
     const char *options[MAX_OPTIONS];
     int correctIndex;
     const char *explanation;
+    int optionCount;
 } Question;
 
 typedef struct {
@@ -108,9 +109,18 @@ typedef struct {
     int examTotalSeconds;
     ExamOverlay examOverlay;
 
-    Texture2D saeTexture;
-    int saeFrame;
-    float saeAnimTimer;
+    float reviewScroll;
+    float reviewScrollTarget;
+    float explanationScroll;
+    float explanationScrollTarget;
+
+    Texture2D examBackground;
+    Texture2D saeNeutral;
+    Texture2D saeAsking;
+    Texture2D saeWarning;
+    Texture2D arisuExplain;
+    Texture2D arisuSmug;
+    Texture2D arisuCritical;
 } Game;
 
 extern const DifficultyInfo DIFFICULTIES[DIFFICULTY_COUNT];

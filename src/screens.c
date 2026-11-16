@@ -1,5 +1,5 @@
 #include "screens.h"
-#include "demo_questions.h"
+#include "question_bank.h"
 #include "ui.h"
 
 #include <math.h>
@@ -603,7 +603,7 @@ void DrawSubtestSelect(const Game *game)
 
     char subtitle[192];
     snprintf(subtitle, sizeof(subtitle),
-             "%s  //  MODE %s  //  DEMO BANK SOAL",
+             "%s  //  MODE %s  //  BANK SOAL TO-3",
              game->session.playerName, difficulty->name);
     UI_TextCentered(game->fonts.ui, subtitle,
                     (Rectangle){ 0.0f, 112.0f, SCREEN_WIDTH, 28.0f },
@@ -639,8 +639,8 @@ void DrawSubtestSelect(const Game *game)
                 isSelected ? UI_TEXT : (Color){ 205, 212, 227, 255 });
 
         char questionLabel[32];
-        snprintf(questionLabel, sizeof(questionLabel), "%d soal demo",
-                 DEMO_QUESTION_COUNTS[i]);
+        snprintf(questionLabel, sizeof(questionLabel), "%d soal",
+                 QUESTION_BANK_COUNTS[i]);
         Vector2 questionSize = MeasureTextEx(game->fonts.small, questionLabel,
                                              13.0f, 0.3f);
         UI_Text(game->fonts.small, questionLabel,
@@ -661,7 +661,7 @@ void DrawSubtestSelect(const Game *game)
         }
     }
 
-    const char *note = "Phase 2 memakai bank soal demo. Bank soal lengkap 160 soal menyusul di Phase 3.";
+    const char *note = "Bank soal TO-3 berisi 115 soal yang lolos validasi teks. Soal bergambar/tabel dilewati.";
     UI_TextCentered(game->fonts.small, note,
                     (Rectangle){ panel.x, 520.0f, panel.width, 22.0f },
                     13.0f, 0.3f, Fade(UI_MUTED, 0.85f));

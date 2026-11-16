@@ -1,6 +1,7 @@
 #include "game.h"
-#include "demo_questions.h"
 #include "exam.h"
+#include "question_bank.h"
+#include "review.h"
 #include "screens.h"
 #include "ui.h"
 
@@ -57,7 +58,7 @@ const char *SUBTEST_CODES[SUBTEST_COUNT] = {
 };
 
 const int SUBTEST_QUESTION_COUNT[SUBTEST_COUNT] = {
-    30, 20, 20, 20, 30, 20, 20
+    25, 19, 17, 11, 18, 20, 5
 };
 
 const int SUBTEST_MINUTES_HARD[SUBTEST_COUNT] = {
@@ -96,6 +97,23 @@ static void UnloadGameFont(Font *font)
 {
     if (font->texture.id != 0 && font->texture.id != GetFontDefault().texture.id) {
         UnloadFont(*font);
+    }
+}
+
+static Texture2D LoadGameTexture(const char *path)
+{
+    Texture2D texture = LoadTexture(path);
+    if (texture.id != 0) {
+        SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
+    }
+    return texture;
+}
+
+static void UnloadGameTexture(Texture2D *texture)
+{
+    if (texture->id != 0) {
+        UnloadTexture(*texture);
+        texture->id = 0;
     }
 }
 
@@ -139,30 +157,66 @@ void GameInit(Game *game)
     game->fonts.ui = LoadGameFont(32);
     game->fonts.small = LoadGameFont(20);
 
-    game->saeTexture = LoadTexture("assets/characters/sae_chabashira.png");
-    if (game->saeTexture.id != 0) {
-        SetTextureFilter(game->saeTexture, TEXTURE_FILTER_BILINEAR);
-    }
-    game->saeFrame = 0;
-    game->saeAnimTimer = 0.0f;
+    game->examBackground = LoadGameTexture("assets/backgrounds/exam_room.jpg");
+    game->saeNeutral = LoadGameTexture("assets/characters/sae_neutral.png");
+    game->saeAsking = LoadGameTexture("assets/characters/sae_asking.png");
+    game->saeWarning = LoadGameTexture("assets/characters/sae_warning.png");
+    game->arisuExplain = LoadGameTexture("assets/characters/arisu_explain.png");
+    game->arisuSmug = LoadGameTexture("assets/characters/arisu_smug.png");
+    game->arisuCritical = LoadGameTexture("assets/characters/arisu_critical.png");
 }
 
 void GameUnload(Game *game)
 {
-    if (game->saeTexture.id != 0) {
-        UnloadTexture(game->saeTexture);
-        game->saeTexture.id = 0;
-    }
+    UnloadGameTexture(&game->examBackground);
+    UnloadGameTexture(&game->saeNeutral);
+    UnloadGameTexture(&game->saeAsking);
+    UnloadGameTexture(&game->saeWarning);
+    UnloadGameTexture(&game->arisuExplain);
+    UnloadGameTexture(&game->arisuSmug);
+    UnloadGameTexture(&game->arisuCritical);
 
     UnloadGameFont(&game->fonts.title);
     UnloadGameFont(&game->fonts.ui);
     UnloadGameFont(&game->fonts.small);
 }
 
+static void ComputeSessionScore(Game *game)
+{
+    int correct = 0;
+    int total = game->session.questionCount;
+    const Question *questions = game->session.questions;
+    int offset = game->session.answerOffset;
+
+    if (questions != NULL && total > 0) {
+        for (int i = 0; i < total; ++i) {
+            int answer = game->session.userAnswers[offset + i];
+            if (answer == questions[i].correctIndex) {
+                ++correct;
+            }
+        }
+    }
+
+    float accuracy = total > 0 ? (float)correct / (float)total : 0.0f;
+    const DifficultyInfo *difficulty = GameCurrentDifficulty(game);
+    game->session.rawIRTScore = (int)(accuracy * 100.0f + 0.5f);
+    game->session.finalScore = (int)(accuracy * 1000.0f *
+                                     difficulty->scoreMultiplier + 0.5f);
+}
+
 void GameChangeState(Game *game, GameState state)
 {
     if (game->state == state) {
         return;
+    }
+
+    if (state == STATE_SCORE_SUMMARY) {
+        ComputeSessionScore(game);
+        game->session.currentQuestion = 0;
+        game->reviewScroll = 0.0f;
+        game->reviewScrollTarget = 0.0f;
+        game->explanationScroll = 0.0f;
+        game->explanationScrollTarget = 0.0f;
     }
 
     game->state = state;
@@ -191,12 +245,6 @@ void GameUpdate(Game *game)
         }
     }
 
-    game->saeAnimTimer += dt;
-    if (game->saeAnimTimer >= 0.45f) {
-        game->saeAnimTimer -= 0.45f;
-        game->saeFrame = (game->saeFrame + 1) % 3;
-    }
-
     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
 
     switch (game->state) {
@@ -216,8 +264,10 @@ void GameUpdate(Game *game)
             UpdatePlaceholder(game);
             break;
         case STATE_SCORE_SUMMARY:
+            UpdateScoreSummary(game);
+            break;
         case STATE_REVIEW_PHASE:
-            UpdatePlaceholder(game);
+            UpdateReviewPhase(game);
             break;
         default:
             break;
@@ -245,8 +295,10 @@ void GameDraw(const Game *game)
             DrawPlaceholder(game);
             break;
         case STATE_SCORE_SUMMARY:
+            DrawScoreSummary(game);
+            break;
         case STATE_REVIEW_PHASE:
-            DrawPlaceholder(game);
+            DrawReviewPhase(game);
             break;
         default:
             break;
@@ -385,8 +437,8 @@ void GameStartExam(Game *game, int subtest)
 
     game->session.currentSubtest = subtest;
     game->session.currentQuestion = 0;
-    game->session.questionCount = DEMO_QUESTION_COUNTS[subtest];
-    game->session.questions = DEMO_QUESTIONS[subtest];
+    game->session.questionCount = QUESTION_BANK_COUNTS[subtest];
+    game->session.questions = QUESTION_BANK[subtest];
     game->session.answerOffset = GameSubtestAnswerOffset(subtest);
 
     for (int i = 0; i < SUBTEST_QUESTION_COUNT[subtest]; ++i) {
@@ -434,7 +486,8 @@ int GameCurrentAnswer(const Game *game)
 
 void GameSetCurrentAnswer(Game *game, int option)
 {
-    if (game->session.questions == NULL || option < 0 || option >= MAX_OPTIONS) {
+    const Question *question = GameCurrentQuestion(game);
+    if (question == NULL || option < 0 || option >= question->optionCount) {
         return;
     }
 
@@ -475,4 +528,7 @@ void GameGoToQuestion(Game *game, int index)
 
     int answer = GameCurrentAnswer(game);
     game->examFocusedOption = answer >= 0 ? answer : 0;
+    if (newQuestion != NULL && game->examFocusedOption >= newQuestion->optionCount) {
+        game->examFocusedOption = 0;
+    }
 }

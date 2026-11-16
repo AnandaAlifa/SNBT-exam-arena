@@ -1,4 +1,4 @@
-#include "exam.h"
+﻿#include "exam.h"
 #include "ui.h"
 
 #include <math.h>
@@ -53,7 +53,7 @@ static Rectangle PassageViewRect(void)
 {
     Rectangle panel = ExamLeftPanelRect();
     return (Rectangle){ panel.x + 24.0f, panel.y + 44.0f,
-                        panel.width - 48.0f, panel.height - 44.0f - 112.0f };
+                        panel.width - 48.0f, panel.height - 44.0f - 150.0f };
 }
 
 static Rectangle PassageTextRect(void)
@@ -153,6 +153,43 @@ static Rectangle OverlayTimeUpRect(void)
     return (Rectangle){ 545.0f, 400.0f, 190.0f, 44.0f };
 }
 
+static int CurrentOptionCount(const Game *game)
+{
+    const Question *question = GameCurrentQuestion(game);
+    if (question == NULL) {
+        return 0;
+    }
+    int count = question->optionCount;
+    if (count < 1) {
+        count = 1;
+    } else if (count > MAX_OPTIONS) {
+        count = MAX_OPTIONS;
+    }
+    return count;
+}
+
+static void DrawExamBackground(const Game *game)
+{
+    if (game->examBackground.id != 0) {
+        float scale = fmaxf((float)SCREEN_WIDTH / (float)game->examBackground.width,
+                            (float)SCREEN_HEIGHT / (float)game->examBackground.height);
+        float width = (float)game->examBackground.width * scale;
+        float height = (float)game->examBackground.height * scale;
+        Rectangle source = { 0.0f, 0.0f,
+                             (float)game->examBackground.width,
+                             (float)game->examBackground.height };
+        Rectangle dest = { (SCREEN_WIDTH - width) * 0.5f,
+                           (SCREEN_HEIGHT - height) * 0.5f, width, height };
+        DrawTexturePro(game->examBackground, source, dest,
+                       (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+        DrawRectangleGradientV(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
+                               Fade((Color){ 7, 10, 18, 255 }, 0.50f),
+                               Fade((Color){ 7, 10, 18, 255 }, 0.82f));
+    } else {
+        UI_DrawBackground(game->totalTime);
+    }
+}
+
 static float ExamMaxScroll(const Game *game)
 {
     const Question *question = GameCurrentQuestion(game);
@@ -182,6 +219,17 @@ static const char *ExamSaeTip(const Game *game)
     return tips[index];
 }
 
+static Texture2D SaeTextureFor(const Game *game)
+{
+    if (game->session.timeRemaining <= 300.0f && game->saeWarning.id != 0) {
+        return game->saeWarning;
+    }
+    if (game->session.currentQuestion % 3 == 1 && game->saeAsking.id != 0) {
+        return game->saeAsking;
+    }
+    return game->saeNeutral;
+}
+
 static void DrawSaePortrait(const Game *game, Rectangle dest)
 {
     Vector2 center = { dest.x + dest.width * 0.5f, dest.y + dest.height * 0.5f };
@@ -189,14 +237,20 @@ static void DrawSaePortrait(const Game *game, Rectangle dest)
     DrawCircleLines((int)center.x, (int)center.y, dest.width * 0.52f,
                     Fade(UI_CYAN, 0.18f));
 
-    if (game->saeTexture.id != 0) {
-        float frameWidth = (float)game->saeTexture.width / 3.0f;
-        Rectangle source = { (float)game->saeFrame * frameWidth, 0.0f,
-                             frameWidth, (float)game->saeTexture.height };
-        Rectangle target = { dest.x, dest.y + sinf(game->totalTime * 2.2f) * 1.5f,
-                             dest.width, dest.height };
-        DrawTexturePro(game->saeTexture, source, target,
-                       (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+    Texture2D texture = SaeTextureFor(game);
+    if (texture.id != 0) {
+        float scale = fminf(dest.width / (float)texture.width,
+                            dest.height / (float)texture.height);
+        float width = (float)texture.width * scale;
+        float height = (float)texture.height * scale;
+        Rectangle target = {
+            dest.x + (dest.width - width) * 0.5f,
+            dest.y + dest.height - height + sinf(game->totalTime * 2.2f) * 1.5f,
+            width, height
+        };
+        DrawTexturePro(texture, (Rectangle){ 0.0f, 0.0f,
+                                            (float)texture.width, (float)texture.height },
+                       target, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
     } else {
         DrawRectangleRounded(dest, 0.2f, 8, Fade(UI_CYAN, 0.12f));
         DrawRectangleRoundedLinesEx(dest, 0.2f, 8, 1.0f, Fade(UI_CYAN, 0.45f));
@@ -280,7 +334,7 @@ static void DrawExamHeader(const Game *game)
 static void DrawPassagePanel(const Game *game)
 {
     Rectangle panel = ExamLeftPanelRect();
-    UI_DrawPanel(panel, UI_PANEL, UI_BORDER);
+    UI_DrawPanel(panel, (Color){ 10, 15, 26, 255 }, UI_BORDER);
     UI_DrawSectionLabel(game->fonts.small, "STIMULUS / TEKS BACAAN",
                         panel.x + 24.0f, panel.y + 16.0f, UI_CYAN);
 
@@ -327,25 +381,31 @@ static void DrawPassagePanel(const Game *game)
         DrawRectangleRounded(thumb, 0.5f, 4, Fade(UI_CYAN, 0.55f));
     }
 
-    float separatorY = panel.y + panel.height - 100.0f;
+    float separatorY = panel.y + panel.height - 138.0f;
     DrawRectangle((int)(panel.x + 20.0f), (int)separatorY,
                   (int)(panel.width - 40.0f), 1, Fade(UI_BORDER, 0.65f));
 
-    Rectangle sae = { panel.x + 24.0f, panel.y + panel.height - 84.0f, 64.0f, 64.0f };
+    Rectangle sae = { panel.x + 18.0f, panel.y + panel.height - 132.0f, 118.0f, 132.0f };
     DrawSaePortrait(game, sae);
 
+    Rectangle bubble = { sae.x + 128.0f, sae.y + 2.0f,
+                         panel.width - 128.0f - 36.0f, 118.0f };
+    DrawRectangleRounded(bubble, 0.12f, 10, (Color){ 13, 18, 30, 235 });
+    DrawRectangleRoundedLinesEx(bubble, 0.12f, 10, 1.0f, Fade(UI_CYAN, 0.35f));
+
     UI_TextSpaced(game->fonts.small, "SAE CHABASHIRA // PENGAWAS",
-                  sae.x + 78.0f, sae.y + 4.0f, 10.0f, 1.5f, Fade(UI_CYAN, 0.85f));
+                  bubble.x + 14.0f, bubble.y + 10.0f, 10.0f, 1.5f,
+                  Fade(UI_CYAN, 0.85f));
     UI_DrawTextWrapped(game->fonts.small, ExamSaeTip(game),
-                       (Rectangle){ sae.x + 78.0f, sae.y + 22.0f,
-                                    panel.width - 24.0f - 78.0f - 24.0f, 40.0f },
+                       (Rectangle){ bubble.x + 14.0f, bubble.y + 30.0f,
+                                    bubble.width - 28.0f, bubble.height - 40.0f },
                        14.0f, 0.25f, 19.0f, UI_MUTED);
 }
 
 static void DrawQuestionPanel(const Game *game)
 {
     Rectangle panel = ExamRightPanelRect();
-    UI_DrawPanel(panel, UI_PANEL, UI_BORDER);
+    UI_DrawPanel(panel, (Color){ 10, 15, 26, 255 }, UI_BORDER);
 
     const Question *question = GameCurrentQuestion(game);
     if (question == NULL) {
@@ -406,7 +466,7 @@ static void DrawQuestionPanel(const Game *game)
                        16.0f, 0.3f, 22.0f, UI_TEXT);
 
     int selected = GameCurrentAnswer(game);
-    for (int i = 0; i < MAX_OPTIONS; ++i) {
+    for (int i = 0; i < question->optionCount; ++i) {
         Rectangle option = OptionRect(game, i);
         bool hovered = CheckCollisionPointRec(GetMousePosition(), option);
         bool isSelected = (selected == i);
@@ -614,11 +674,15 @@ void UpdateExam(Game *game)
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) {
         GameGoToQuestion(game, game->session.currentQuestion + 1);
     }
+    int optionCount = CurrentOptionCount(game);
+    if (optionCount < 1) {
+        optionCount = 1;
+    }
     if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-        game->examFocusedOption = (game->examFocusedOption + MAX_OPTIONS - 1) % MAX_OPTIONS;
+        game->examFocusedOption = (game->examFocusedOption + optionCount - 1) % optionCount;
     }
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-        game->examFocusedOption = (game->examFocusedOption + 1) % MAX_OPTIONS;
+        game->examFocusedOption = (game->examFocusedOption + 1) % optionCount;
     }
 
     if (IsKeyPressed(KEY_ONE) || IsKeyPressed(KEY_KP_1)) {
@@ -637,16 +701,20 @@ void UpdateExam(Game *game)
         game->examFocusedOption = 3;
         GameSetCurrentAnswer(game, 3);
     }
-    if (IsKeyPressed(KEY_FIVE) || IsKeyPressed(KEY_KP_5)) {
+    if ((IsKeyPressed(KEY_FIVE) || IsKeyPressed(KEY_KP_5)) && optionCount > 4) {
         game->examFocusedOption = 4;
         GameSetCurrentAnswer(game, 4);
+    }
+
+    if (game->examFocusedOption >= optionCount) {
+        game->examFocusedOption = optionCount - 1;
     }
 
     if (EnterPressed()) {
         GameSetCurrentAnswer(game, game->examFocusedOption);
     }
 
-    for (int i = 0; i < MAX_OPTIONS; ++i) {
+    for (int i = 0; i < optionCount; ++i) {
         if (UI_IsClicked(OptionRect(game, i))) {
             game->examFocusedOption = i;
             GameSetCurrentAnswer(game, i);
@@ -675,7 +743,7 @@ void UpdateExam(Game *game)
 
 void DrawExam(const Game *game)
 {
-    UI_DrawBackground(game->totalTime);
+    DrawExamBackground(game);
     DrawExamHeader(game);
     DrawPassagePanel(game);
     DrawQuestionPanel(game);

@@ -2,7 +2,7 @@
 
 Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT dengan nuansa visual novel. Pemain memasukkan nama, memilih tingkat kesulitan, lalu menjalani sesi ujian yang dipandu oleh karakter bergaya *Classroom of the Elite*.
 
-> **Status:** Phase 2 selesai. Layar ujian interaktif sudah berjalan dengan bank soal demo. Scoring IRT, pembahasan, TTS, dan leaderboard masih berupa placeholder dan akan dibangun pada fase berikutnya.
+> **Status:** Core Phase 4 selesai. Layar ujian memakai bank soal TO-3 hasil ekstraksi, ringkasan skor, dan pembahasan per nomor bersama Arisu. TTS dan leaderboard masih placeholder.
 
 ![Menu utama](docs/screenshots/menu.png)
 
@@ -16,21 +16,25 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 
 ![Layar ujian](docs/screenshots/exam.png)
 
-## Fitur Phase 2
+![Ringkasan skor](docs/screenshots/summary.png)
+
+![Pembahasan](docs/screenshots/review.png)
+
+## Fitur Saat Ini
 
 - State machine dengan 7 state sesuai SDD: menu, difficulty, subtes, ujian, ringkasan skor, pembahasan, dan leaderboard.
 - Input nama pemain interaktif dengan validasi, batas 31 karakter, caret, dan backspace.
 - Lima tingkat kesulitan dengan konfigurasi time multiplier, score multiplier, dan status TTS.
 - Pemilihan subtes interaktif dengan 7 subtes resmi UTBK SNBT dan durasi per subtes.
-- Layar ujian dengan header subtes, timer countdown, progress bar, dan tombol keluar.
+- Layar ujian bergaya visual novel dengan background kelas, portrait Sae, dan dialog pengawas.
 - Panel stimulus dengan word-wrap, scrollbar, serta gulir via mouse wheel dan `PageUp`/`PageDown`.
-- Panel soal dengan navigator 30 soal, status terjawab, opsi A–E, dan fokus keyboard/mouse.
-- Sprite Sae Chabashira 3 frame dengan animasi idle dan tips kontekstual per soal.
+- Panel soal dengan navigator, status terjawab, opsi A–E (mendukung soal 4 opsi), dan fokus keyboard/mouse.
+- Bank soal TO-3 hasil ekstraksi: 115 soal yang lolos validasi teks; soal bergambar/tabel dilewati.
+- Ringkasan skor per subtes: benar, salah, kosong, akurasi, dan skor akhir dengan pengali difficulty.
+- Pembahasan per nomor bersama Arisu: kunci, jawaban pengguna, highlight opsi, dan strategi subtes.
 - Overlay konfirmasi selesai ujian, keluar ujian, dan waktu habis.
-- Bank soal demo 15 soal: PU 3 soal, PPU/PBM/PK/LBI/LBE/PM masing-masing 2 soal.
-- Tampilan custom immediate-mode dengan animasi background, panel, tombol, dan transisi fade.
 - Font sistem otomatis (Segoe UI / DejaVu Sans) dengan fallback ke font bawaan Raylib.
-- Placeholder terstruktur untuk scoring IRT, pembahasan, TTS, dan leaderboard (Phase 3–5).
+- Placeholder untuk TTS dan leaderboard (Phase 5).
 
 ## Teknologi
 
@@ -48,11 +52,15 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 │   ├── game.c/.h           # State machine, session, difficulty, font, asset
 │   ├── screens.c/.h        # Menu, difficulty, subtes, placeholder
 │   ├── exam.c/.h           # Layar ujian, timer, scroll, overlay
-│   ├── demo_questions.c/.h # Bank soal demo 7 subtes
+│   ├── review.c/.h         # Ringkasan skor dan pembahasan Arisu
+│   ├── question_bank.c/.h  # Bank soal TO-3 per subtes
 │   └── ui.c/.h             # Komponen UI custom
 ├── assets/
+│   ├── backgrounds/
+│   │   └── exam_room.jpg
 │   └── characters/
-│       └── sae_chabashira.png
+│       ├── sae_*.png
+│       └── arisu_*.png
 ├── docs/
 │   └── screenshots/        # Dokumentasi visual
 ├── Makefile
@@ -91,7 +99,7 @@ Pastikan GCC dan Raylib sudah terpasang dan tersedia di `PATH`:
 
 ```powershell
 gcc -std=c99 -Wall -Wextra -O2 -Isrc src/main.c src/game.c src/ui.c src/screens.c `
-    src/exam.c src/demo_questions.c `
+    src/exam.c src/review.c src/question_bank.c `
     -o utbk_tactics.exe -lraylib -lopengl32 -lgdi32 -lwinmm -luser32 -lm
 
 .\utbk_tactics.exe
@@ -148,20 +156,33 @@ make
 | `Esc` | Membuka konfirmasi keluar ujian |
 | Mouse | Klik opsi, navigator soal, dan tombol |
 
+### Ringkasan Skor dan Pembahasan
+
+| Tombol | Aksi |
+| --- | --- |
+| `Enter` | Membuka pembahasan dari ringkasan skor |
+| `A` / `D` / `←` / `→` | Soal pembahasan sebelumnya / berikutnya |
+| Scroll / `PageUp` / `PageDown` | Menggulir teks atau penjelasan |
+| `Esc` | Kembali ke ringkasan skor / pilihan subtes |
+| Mouse | Klik tombol navigasi dan opsi |
+
 ## Roadmap
 
 - [x] **Phase 1** — Boilerplate, state machine, input nama, pemilihan difficulty
-- [x] **Phase 2** — Layout ujian, scrolling passage, sprite Sae Chabashira, bank soal demo
-- [ ] **Phase 3** — Parsing JSON modular, bank soal lengkap 1600+, Fisher–Yates, seleksi soal per subtes
-- [ ] **Phase 4** — Scoring IRT, review phase, sprite Arisu Sakayanagi, TTS
+- [x] **Phase 2** — Layout ujian, scrolling passage, sprite Sae Chabashira
+- [x] **Phase 3 (subset)** — Ekstraksi TO-3, bank 115 soal, parsing passage dan kunci
+- [x] **Phase 4 (core)** — Ringkasan skor, pembahasan per nomor, sprite Arisu
+- [ ] **Phase 3 (lanjutan)** — Bank soal lengkap dari tryout lain, seleksi acak
+- [ ] **Phase 4 (lanjutan)** — TTS dan pembahasan yang lebih mendalam
 - [ ] **Phase 5** — Leaderboard Top 10, file I/O, memory management
 
 ## Catatan Pengembangan
 
-- Phase 2 memuat bank soal demo 15 soal; bank soal lengkap 1600+ soal dan parsing JSON menyusul Phase 3.
-- Timer per subtes sudah berjalan, tetapi scoring IRT, review, TTS, dan leaderboard masih placeholder.
-- Tombol **Papan Peringkat** dan state lanjutan saat ini menampilkan placeholder informatif.
-- Aset karakter berada di `assets/characters/sae_chabashira.png` dan dimuat saat runtime.
+- Bank saat ini berisi 115 soal TO-3 yang lolos validasi teks. Soal yang bergantung pada gambar, grafik, atau tabel dilewati.
+- Kunci LBI nomor 21–30 tidak tersedia pada tabel kunci yang diekstrak, sehingga bank LBI berhenti di nomor 18.
+- Skor akhir memakai akurasi subtes dan pengali difficulty; ini bukan simulasi IRT penuh.
+- Pembahasan menampilkan kunci dan strategi subtes, bukan analisis langkah demi langkah yang dikarang.
+- Aset karakter berada di `assets/characters/` dan background di `assets/backgrounds/`.
 
 ## Kredit & Disclaimer
 
