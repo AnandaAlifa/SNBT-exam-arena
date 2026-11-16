@@ -2,7 +2,7 @@
 
 Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT dengan nuansa visual novel. Pemain memasukkan nama, memilih tingkat kesulitan, lalu menjalani sesi ujian yang dipandu oleh karakter bergaya *Classroom of the Elite*.
 
-> **Status:** Core Phase 4 selesai. Layar ujian memakai bank soal TO-3 hasil ekstraksi, ringkasan skor, dan pembahasan per nomor bersama Arisu. TTS dan leaderboard masih placeholder.
+> **Status:** Core Phase 1–5 selesai. Layar ujian memakai bank soal TO-3 hasil ekstraksi, ringkasan skor, pembahasan per nomor bersama Arisu, dan leaderboard Top 10 yang tersimpan otomatis. TTS masih placeholder.
 
 ![Menu utama](docs/screenshots/menu.png)
 
@@ -20,6 +20,10 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 
 ![Pembahasan](docs/screenshots/review.png)
 
+### Papan Peringkat
+
+![Leaderboard](docs/screenshots/leaderboard.png)
+
 ## Fitur Saat Ini
 
 - State machine dengan 7 state sesuai SDD: menu, difficulty, subtes, ujian, ringkasan skor, pembahasan, dan leaderboard.
@@ -32,9 +36,10 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 - Bank soal TO-3 hasil ekstraksi: 115 soal yang lolos validasi teks; soal bergambar/tabel dilewati.
 - Ringkasan skor per subtes: benar, salah, kosong, akurasi, dan skor akhir dengan pengali difficulty.
 - Pembahasan per nomor bersama Arisu: kunci, jawaban pengguna, highlight opsi, dan strategi subtes.
+- Leaderboard Top 10 tersimpan otomatis ke `leaderboard.dat`, diurutkan berdasarkan skor, dengan nama, subtes, dan difficulty.
 - Overlay konfirmasi selesai ujian, keluar ujian, dan waktu habis.
 - Font sistem otomatis (Segoe UI / DejaVu Sans) dengan fallback ke font bawaan Raylib.
-- Placeholder untuk TTS dan leaderboard (Phase 5).
+- TTS masih placeholder; status TTS ditampilkan pada konfigurasi difficulty.
 
 ## Teknologi
 
@@ -50,9 +55,10 @@ Game edukasi berbasis **C99** dan **Raylib** yang mensimulasikan UTBK SNBT denga
 ├── src/
 │   ├── main.c              # Entry point dan game loop
 │   ├── game.c/.h           # State machine, session, difficulty, font, asset
-│   ├── screens.c/.h        # Menu, difficulty, subtes, placeholder
+│   ├── screens.c/.h        # Menu, difficulty, subtes, leaderboard
 │   ├── exam.c/.h           # Layar ujian, timer, scroll, overlay
 │   ├── review.c/.h         # Ringkasan skor dan pembahasan Arisu
+│   ├── leaderboard.c/.h    # Leaderboard Top 10 dan file I/O
 │   ├── question_bank.c/.h  # Bank soal TO-3 per subtes
 │   └── ui.c/.h             # Komponen UI custom
 ├── assets/
@@ -99,7 +105,7 @@ Pastikan GCC dan Raylib sudah terpasang dan tersedia di `PATH`:
 
 ```powershell
 gcc -std=c99 -Wall -Wextra -O2 -Isrc src/main.c src/game.c src/ui.c src/screens.c `
-    src/exam.c src/review.c src/question_bank.c `
+    src/exam.c src/review.c src/leaderboard.c src/question_bank.c `
     -o utbk_tactics.exe -lraylib -lopengl32 -lgdi32 -lwinmm -luser32 -lm
 
 .\utbk_tactics.exe
@@ -166,6 +172,15 @@ make
 | `Esc` | Kembali ke ringkasan skor / pilihan subtes |
 | Mouse | Klik tombol navigasi dan opsi |
 
+### Papan Peringkat
+
+| Tombol | Aksi |
+| --- | --- |
+| `W` / `S` / `↑` / `↓` | Berpindah fokus menu utama |
+| `Enter` | Membuka papan peringkat |
+| `Esc` / `Enter` | Kembali ke menu utama |
+| Mouse | Klik tombol kembali |
+
 ## Roadmap
 
 - [x] **Phase 1** — Boilerplate, state machine, input nama, pemilihan difficulty
@@ -174,7 +189,7 @@ make
 - [x] **Phase 4 (core)** — Ringkasan skor, pembahasan per nomor, sprite Arisu
 - [ ] **Phase 3 (lanjutan)** — Bank soal lengkap dari tryout lain, seleksi acak
 - [ ] **Phase 4 (lanjutan)** — TTS dan pembahasan yang lebih mendalam
-- [ ] **Phase 5** — Leaderboard Top 10, file I/O, memory management
+- [x] **Phase 5** — Leaderboard Top 10, file I/O, memory management
 
 ## Catatan Pengembangan
 
@@ -182,6 +197,7 @@ make
 - Kunci LBI nomor 21–30 tidak tersedia pada tabel kunci yang diekstrak, sehingga bank LBI berhenti di nomor 18.
 - Skor akhir memakai akurasi subtes dan pengali difficulty; ini bukan simulasi IRT penuh.
 - Pembahasan menampilkan kunci dan strategi subtes, bukan analisis langkah demi langkah yang dikarang.
+- Leaderboard menyimpan maksimal 10 skor terbaik di `leaderboard.dat` (format biner, diabaikan Git) dan menambah entri otomatis saat ringkasan skor dibuka.
 - Aset karakter berada di `assets/characters/` dan background di `assets/backgrounds/`.
 
 ## Kredit & Disclaimer

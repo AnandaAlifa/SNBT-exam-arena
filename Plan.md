@@ -32,6 +32,6 @@ Rencana implementasi pengembangan game C Raylib ini dibagi menjadi 5 fase terstr
   - Aktif secara otomatis pada sesi pembahasan (*Review Phase*) untuk semua tingkat kesulitan.
 
 ## Phase 5: Leaderboard, File I/O, & Memory Management
-- [ ] Membuat sistem penyimpanan skor lokal (`leaderboard.dat`) menggunakan *struct* C untuk menyimpan Top 10 pemain beserta nama, skor akhir, dan tingkat kesulitan yang digunakan.
-- [ ] Menambahkan *sorting algorithm* (Insertion/Quicksort) untuk mengurutkan skor tertinggi secara *descending*.
-- [ ] Pembersihan memori (*memory leak check*): Memastikan seluruh tekstur (`UnloadTexture`) dan alokasi soal (`free`) dibersihkan dengan benar saat aplikasi ditutup.
+- [x] Membuat sistem penyimpanan skor lokal (`leaderboard.dat`) menggunakan *struct* C untuk menyimpan Top 10 pemain beserta nama, skor akhir, subtes, dan tingkat kesulitan yang digunakan.
+- [x] Menambahkan *sorting algorithm* (Insertion/Quicksort) untuk mengurutkan skor tertinggi secara *descending*.
+- [x] Pembersihan memori (*memory leak check*): Memastikan seluruh tekstur (`UnloadTexture`) dan font dibersihkan dengan benar saat aplikasi ditutup; bank soal memakai data statis.

@@ -14,6 +14,7 @@
 #define DIFFICULTY_COUNT 5
 #define SUBTEST_COUNT 7
 #define SNBT_TOTAL_SECONDS 11700
+#define LEADERBOARD_MAX 10
 
 typedef enum {
     STATE_MENU = 0,
@@ -77,6 +78,7 @@ typedef struct {
     char name[32];
     int score;
     int difficultyUsed;
+    int subtest;
 } LeaderboardEntry;
 
 typedef struct {
@@ -113,6 +115,10 @@ typedef struct {
     float reviewScrollTarget;
     float explanationScroll;
     float explanationScrollTarget;
+
+    LeaderboardEntry leaderboard[LEADERBOARD_MAX];
+    int leaderboardCount;
+    bool scoreSaved;
 
     Texture2D examBackground;
     Texture2D saeNeutral;

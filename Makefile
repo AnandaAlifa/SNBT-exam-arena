@@ -23,7 +23,7 @@ else
     TARGET := utbk_tactics
 endif
 
-SRC := src/main.c src/game.c src/ui.c src/screens.c src/exam.c src/review.c src/question_bank.c
+SRC := src/main.c src/game.c src/ui.c src/screens.c src/exam.c src/review.c src/leaderboard.c src/question_bank.c
 OBJ := $(SRC:.c=.o)
 
 all: $(TARGET)
@@ -31,7 +31,7 @@ all: $(TARGET)
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) -o $@ $(LDLIBS)
 
-src/%.o: src/%.c src/game.h src/ui.h src/screens.h src/exam.h src/review.h src/question_bank.h
+src/%.o: src/%.c src/game.h src/ui.h src/screens.h src/exam.h src/review.h src/leaderboard.h src/question_bank.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(TARGET)

@@ -279,7 +279,7 @@ void DrawMenu(const Game *game)
                     (Rectangle){ panel.x, 602.0f, panel.width, 22.0f },
                     13.0f, 0.5f, Fade(UI_MUTED, 0.8f));
 
-    UI_TextSpaced(game->fonts.small, "v0.2 // PHASE 2",
+    UI_TextSpaced(game->fonts.small, "v0.5 // PHASE 5",
                   panel.x + 34.0f, 638.0f, 11.0f, 1.5f, Fade(UI_MUTED, 0.55f));
 
     const char *engine = "POWERED BY RAYLIB";
@@ -677,140 +677,144 @@ void DrawSubtestSelect(const Game *game)
                     12.0f, 0.8f, Fade(UI_MUTED, 0.7f));
 }
 
-/* ------------------------------------------------------------------------- */
-/* Generic placeholder screen                                                */
-/* ------------------------------------------------------------------------- */
-
-static const char *PlaceholderTitle(GameState state)
+static Rectangle LeaderboardPanelRect(void)
 {
-    switch (state) {
-        case STATE_LEADERBOARD:
-            return "PAPAN PERINGKAT";
-        case STATE_EXAM:
-            return "SESI UJIAN";
-        case STATE_SCORE_SUMMARY:
-            return "RINGKASAN SKOR";
-        case STATE_REVIEW_PHASE:
-            return "FASE PEMBAHASAN";
-        default:
-            return "SEGERA HADIR";
+    return (Rectangle){ 190.0f, 44.0f, 900.0f, 632.0f };
+}
+
+static Rectangle LeaderboardBackRect(void)
+{
+    return (Rectangle){ 545.0f, 590.0f, 190.0f, 44.0f };
+}
+
+static Rectangle LeaderboardRowRect(int index)
+{
+    return (Rectangle){ 208.0f, 196.0f + (float)index * 36.0f, 864.0f, 30.0f };
+}
+
+void UpdateLeaderboard(Game *game)
+{
+    if (UI_IsClicked(LeaderboardBackRect()) ||
+        IsKeyPressed(KEY_ESCAPE) || EnterPressed()) {
+        GameChangeState(game, STATE_MENU);
     }
 }
 
-static const char *PlaceholderPhase(GameState state)
-{
-    switch (state) {
-        case STATE_LEADERBOARD:
-            return "PHASE 5";
-        case STATE_EXAM:
-            return "PHASE 2";
-        case STATE_SCORE_SUMMARY:
-            return "PHASE 3";
-        case STATE_REVIEW_PHASE:
-            return "PHASE 4";
-        default:
-            return "PHASE 1";
-    }
-}
-
-static const char *PlaceholderNote(GameState state)
-{
-    switch (state) {
-        case STATE_LEADERBOARD:
-            return "Penyimpanan Top 10 akan dibuat pada Phase 5: file leaderboard.dat, "
-                   "sorting skor descending, dan tampilan papan peringkat.";
-        case STATE_EXAM:
-            return "UI ujian, timer per subtes, panel passage yang bisa di-scroll, "
-                   "dan sprite Sae Chabashira tersedia pada Phase 2.";
-        case STATE_SCORE_SUMMARY:
-            return "Kalkulasi Item Response Theory (IRT) dan ringkasan skor akhir "
-                   "dibuat pada Phase 3.";
-        case STATE_REVIEW_PHASE:
-            return "Pembahasan per nomor, sprite Arisu Sakayanagi, dan integrasi "
-                   "Text-to-Speech dibuat pada Phase 4.";
-        default:
-            return "Modul ini belum tersedia.";
-    }
-}
-
-static Rectangle PlaceholderPanelRect(void)
-{
-    return (Rectangle){ 300.0f, 96.0f, 680.0f, 528.0f };
-}
-
-static Rectangle PlaceholderBackRect(void)
-{
-    return (Rectangle){ 545.0f, 492.0f, 190.0f, 48.0f };
-}
-
-void UpdatePlaceholder(Game *game)
-{
-    if (UI_IsClicked(PlaceholderBackRect()) || IsKeyPressed(KEY_ESCAPE)) {
-        if (game->state == STATE_LEADERBOARD) {
-            GameChangeState(game, STATE_MENU);
-        } else {
-            GameChangeState(game, STATE_SUBTEST_SELECT);
-        }
-    }
-}
-
-void DrawPlaceholder(const Game *game)
+void DrawLeaderboard(const Game *game)
 {
     UI_DrawBackground(game->totalTime);
 
-    Rectangle panel = PlaceholderPanelRect();
+    Rectangle panel = LeaderboardPanelRect();
     UI_DrawPanel(panel, UI_PANEL, UI_BORDER);
-    DrawCornerBrackets(panel, Fade(UI_CYAN, 0.45f), 26.0f, 1.6f);
+    DrawCornerBrackets(panel, Fade(UI_CYAN, 0.55f), 28.0f, 1.8f);
 
-    const char *phase = PlaceholderPhase(game->state);
-    Vector2 phaseSize = MeasureTextEx(game->fonts.small, phase, 12.0f, 2.4f);
-    Rectangle pill = {
-        panel.x + (panel.width - phaseSize.x - 36.0f) * 0.5f,
-        panel.y + 28.0f,
-        phaseSize.x + 36.0f,
-        28.0f
-    };
-    DrawRectangleRounded(pill, 0.5f, 10, Fade(UI_ACCENT, 0.12f));
-    DrawRectangleRoundedLinesEx(pill, 0.5f, 10, 1.0f, Fade(UI_ACCENT, 0.55f));
-    UI_TextCentered(game->fonts.small, phase, pill, 12.0f, 2.4f, UI_ACCENT);
+    UI_TextSpaced(game->fonts.small, "PAPAN PERINGKAT  //  TOP 10",
+                  panel.x + 28.0f, panel.y + 18.0f, 11.0f, 2.2f, UI_CYAN);
+    UI_Text(game->fonts.ui, "HALL OF FAME", panel.x + 28.0f, panel.y + 36.0f,
+            36.0f, UI_TEXT);
 
-    UI_TextCentered(game->fonts.title, PlaceholderTitle(game->state),
-                    (Rectangle){ panel.x, panel.y + 68.0f, panel.width, 52.0f },
-                    38.0f, 1.2f, UI_TEXT);
+    int count = game->leaderboardCount;
+    if (count < 0) {
+        count = 0;
+    } else if (count > LEADERBOARD_MAX) {
+        count = LEADERBOARD_MAX;
+    }
 
-    const char *subtitle = "Modul ini akan dibangun pada fase berikutnya.";
-    UI_TextCentered(game->fonts.small, subtitle,
-                    (Rectangle){ panel.x, panel.y + 122.0f, panel.width, 24.0f },
-                    14.0f, 0.4f, UI_MUTED);
-
-    DrawRectangle((int)(panel.x + 90.0f), (int)(panel.y + 162.0f),
-                  (int)(panel.width - 180.0f), 1, Fade(UI_BORDER, 0.8f));
-
-    UI_DrawTextWrapped(game->fonts.ui, PlaceholderNote(game->state),
-                       (Rectangle){ panel.x + 70.0f, panel.y + 186.0f,
-                                    panel.width - 140.0f, 90.0f },
-                       16.0f, 0.3f, 24.0f, (Color){ 200, 208, 224, 255 });
-
-    Rectangle info = { panel.x + 70.0f, panel.y + 296.0f,
-                       panel.width - 140.0f, 74.0f };
-    DrawRectangleRounded(info, 0.12f, 10, (Color){ 14, 20, 33, 255 });
-    DrawRectangleRoundedLinesEx(info, 0.12f, 10, 1.0f, Fade(UI_BORDER, 0.8f));
-
-    char playerLine[96];
-    snprintf(playerLine, sizeof(playerLine), "PESERTA   %s", game->session.playerName);
-    UI_Text(game->fonts.small, playerLine, info.x + 20.0f, info.y + 14.0f,
+    char subtitle[128];
+    if (count > 0) {
+        snprintf(subtitle, sizeof(subtitle),
+                 "%d SKOR TERSIMPAN  //  SKOR SUBTES TERBAIK", count);
+    } else {
+        snprintf(subtitle, sizeof(subtitle),
+                 "Belum ada skor. Selesaikan satu subtes untuk masuk papan peringkat.");
+    }
+    UI_Text(game->fonts.small, subtitle, panel.x + 28.0f, panel.y + 84.0f,
             13.0f, UI_MUTED);
 
-    const DifficultyInfo *difficulty = GameCurrentDifficulty(game);
-    char modeLine[96];
-    snprintf(modeLine, sizeof(modeLine), "MODE      %s", difficulty->name);
-    UI_Text(game->fonts.small, modeLine, info.x + 20.0f, info.y + 40.0f,
-            13.0f, difficulty->accent);
+    DrawRectangle((int)(panel.x + 28.0f), (int)(panel.y + 116.0f),
+                  (int)(panel.width - 56.0f), 1, Fade(UI_BORDER, 0.9f));
 
-    UI_Button(game->fonts.ui, PlaceholderBackRect(), "KEMBALI",
+    const float headerY = panel.y + 128.0f;
+    const float nameX = panel.x + 78.0f;
+    const float subtestX = panel.x + 560.0f;
+    const float modeX = panel.x + 660.0f;
+    const float scoreRight = panel.x + panel.width - 28.0f;
+
+    UI_TextSpaced(game->fonts.small, "#", panel.x + 30.0f, headerY,
+                  10.0f, 1.2f, UI_MUTED);
+    UI_TextSpaced(game->fonts.small, "PEMAIN", nameX, headerY,
+                  10.0f, 1.2f, UI_MUTED);
+    UI_TextSpaced(game->fonts.small, "SUBTES", subtestX, headerY,
+                  10.0f, 1.2f, UI_MUTED);
+    UI_TextSpaced(game->fonts.small, "MODE", modeX, headerY,
+                  10.0f, 1.2f, UI_MUTED);
+
+    Vector2 scoreHeaderSize = MeasureTextEx(game->fonts.small, "SKOR", 10.0f, 1.2f);
+    UI_TextSpaced(game->fonts.small, "SKOR",
+                  scoreRight - scoreHeaderSize.x, headerY,
+                  10.0f, 1.2f, UI_MUTED);
+
+    if (count == 0) {
+        UI_TextCentered(game->fonts.small,
+                        "Papan peringkat masih kosong.",
+                        (Rectangle){ panel.x + 28.0f, 260.0f,
+                                     panel.width - 56.0f, 40.0f },
+                        16.0f, 0.5f, Fade(UI_MUTED, 0.8f));
+    }
+
+    for (int i = 0; i < count; ++i) {
+        const LeaderboardEntry *entry = &game->leaderboard[i];
+        Rectangle row = LeaderboardRowRect(i);
+        Color rankColor = (Color){ 205, 214, 230, 255 };
+        if (i == 0) {
+            rankColor = (Color){ 255, 206, 84, 255 };
+        } else if (i == 1) {
+            rankColor = (Color){ 198, 210, 225, 255 };
+        } else if (i == 2) {
+            rankColor = (Color){ 205, 141, 93, 255 };
+        }
+
+        Color fill = (i % 2 == 0) ? (Color){ 16, 22, 36, 230 }
+                                  : (Color){ 13, 19, 31, 230 };
+        DrawRectangleRounded(row, 0.16f, 8, fill);
+        DrawRectangleRoundedLinesEx(row, 0.16f, 8, 1.0f,
+                                    Fade(rankColor, i < 3 ? 0.55f : 0.16f));
+
+        char rank[8];
+        snprintf(rank, sizeof(rank), "%02d", i + 1);
+        UI_Text(game->fonts.small, rank, row.x + 12.0f, row.y + 7.0f,
+                14.0f, rankColor);
+
+        UI_Text(game->fonts.ui, entry->name, nameX, row.y + 5.0f,
+                16.0f, UI_TEXT);
+
+        int subtest = entry->subtest;
+        if (subtest < 0 || subtest >= SUBTEST_COUNT) {
+            subtest = 0;
+        }
+        UI_Text(game->fonts.small, SUBTEST_CODES[subtest],
+                subtestX, row.y + 7.0f, 13.0f, UI_CYAN);
+
+        int difficulty = entry->difficultyUsed;
+        if (difficulty < 0 || difficulty >= DIFFICULTY_COUNT) {
+            difficulty = DIFFICULTY_HARD;
+        }
+        UI_Text(game->fonts.small, DIFFICULTIES[difficulty].name,
+                modeX, row.y + 7.0f, 13.0f, DIFFICULTIES[difficulty].accent);
+
+        char score[16];
+        snprintf(score, sizeof(score), "%d", entry->score);
+        Vector2 scoreSize = MeasureTextEx(game->fonts.ui, score, 17.0f, 0.3f);
+        UI_Text(game->fonts.ui, score,
+                scoreRight - scoreSize.x, row.y + 4.0f,
+                17.0f, rankColor);
+    }
+
+    UI_Button(game->fonts.ui, LeaderboardBackRect(), "KEMBALI",
               false, true, UI_BUTTON_SECONDARY, UI_CYAN);
 
-    UI_TextCentered(game->fonts.small, "ESC: KEMBALI",
-                    (Rectangle){ 0.0f, 660.0f, SCREEN_WIDTH, 20.0f },
-                    12.0f, 0.8f, Fade(UI_MUTED, 0.7f));
+    UI_TextCentered(game->fonts.small,
+                    "ENTER / ESC: KEMBALI KE MENU   |   SKOR TERSIMPAN OTOMATIS",
+                    (Rectangle){ 0.0f, 650.0f, SCREEN_WIDTH, 18.0f },
+                    11.0f, 0.8f, Fade(UI_MUTED, 0.75f));
 }

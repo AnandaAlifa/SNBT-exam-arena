@@ -1,5 +1,6 @@
 #include "game.h"
 #include "exam.h"
+#include "leaderboard.h"
 #include "question_bank.h"
 #include "review.h"
 #include "screens.h"
@@ -132,6 +133,7 @@ void GameInit(Game *game)
     game->selectedDifficulty = DIFFICULTY_HARD;
     game->selectedSubtest = 0;
     game->exitRequested = false;
+    game->scoreSaved = false;
 
     game->examScroll = 0.0f;
     game->examScrollTarget = 0.0f;
@@ -164,6 +166,8 @@ void GameInit(Game *game)
     game->arisuExplain = LoadGameTexture("assets/characters/arisu_explain.png");
     game->arisuSmug = LoadGameTexture("assets/characters/arisu_smug.png");
     game->arisuCritical = LoadGameTexture("assets/characters/arisu_critical.png");
+
+    LeaderboardLoad(game);
 }
 
 void GameUnload(Game *game)
@@ -212,6 +216,10 @@ void GameChangeState(Game *game, GameState state)
 
     if (state == STATE_SCORE_SUMMARY) {
         ComputeSessionScore(game);
+        if (!game->scoreSaved && game->session.questionCount > 0) {
+            LeaderboardSubmit(game);
+            game->scoreSaved = true;
+        }
         game->session.currentQuestion = 0;
         game->reviewScroll = 0.0f;
         game->reviewScrollTarget = 0.0f;
@@ -261,7 +269,7 @@ void GameUpdate(Game *game)
             UpdateExam(game);
             break;
         case STATE_LEADERBOARD:
-            UpdatePlaceholder(game);
+            UpdateLeaderboard(game);
             break;
         case STATE_SCORE_SUMMARY:
             UpdateScoreSummary(game);
@@ -292,7 +300,7 @@ void GameDraw(const Game *game)
             DrawExam(game);
             break;
         case STATE_LEADERBOARD:
-            DrawPlaceholder(game);
+            DrawLeaderboard(game);
             break;
         case STATE_SCORE_SUMMARY:
             DrawScoreSummary(game);
@@ -452,6 +460,7 @@ void GameStartExam(Game *game, int subtest)
     game->examScrollTarget = 0.0f;
     game->examFocusedOption = 0;
     game->examOverlay = EXAM_OVERLAY_NONE;
+    game->scoreSaved = false;
 
     GameChangeState(game, STATE_EXAM);
 }

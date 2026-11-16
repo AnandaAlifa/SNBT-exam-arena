@@ -12,7 +12,7 @@ void DrawDifficulty(const Game *game);
 void UpdateSubtestSelect(Game *game);
 void DrawSubtestSelect(const Game *game);
 
-void UpdatePlaceholder(Game *game);
-void DrawPlaceholder(const Game *game);
+void UpdateLeaderboard(Game *game);
+void DrawLeaderboard(const Game *game);
 
 #endif
